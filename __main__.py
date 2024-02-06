@@ -11,6 +11,7 @@ import tkinter as tk
 import zipfile
 from pathlib import Path
 from tkinter import font, ttk
+from loguru import logger
 
 from PIL import Image, ImageTk
 from py7zr import SevenZipFile
@@ -31,7 +32,7 @@ def is_admin():
 
 def run_as_admin():
     if is_admin():
-        print("Already running with administrator privileges.")
+        logger.debug("Already running with administrator privileges.")
     else:
         ctypes.windll.shell32.ShellExecuteW(
             None, "runas", sys.executable, " ".join(sys.argv), None, 1
@@ -54,7 +55,7 @@ def get_windows_username():
             username = getpass.getuser()
             return username
         except Exception as e:
-            print("Unable to retrieve Windows username:", str(e))
+            logger.warning("Unable to retrieve Windows username:", str(e))
             return None
 
 
@@ -88,17 +89,18 @@ class DecompressFrame(tk.Frame):
             elif archive_path.suffix == ".zip":
                 self.decompress_zip(archive_path, output_directory)
             else:
-                print(f"Unsupported archive format: {archive_path}")
+                logger.error(f"Unsupported archive format: {archive_path}")
 
             # Set the completion status to True
             self.decompression_complete.set(True)
+
+            logger.debug(f"Extracted {archive_path} to {output_directory}")
 
             # Call the callback function if provided
             if callback:
                 callback()
         except Exception as e:
-            print(f"Error during decompression: {e}")
-            print(output_directory)
+            logger.exception("Error during decompression:", e, archive_path, output_directory)
             raise
 
     def decompress_7z(self, archive_path, output_directory):
@@ -134,7 +136,7 @@ class InstallerApp(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        print(f"Admin: {is_admin()}")
+        logger.debug(f"IsAdmin: {is_admin()}")
 
         self.config = configparser.ConfigParser()
         self.config.read(CONFIG_PATH)
@@ -150,11 +152,19 @@ class InstallerApp(tk.Tk):
         self.BIG_BOLD_FONT = font.Font(weight="bold", size=16)
         self.MIN_FONT = font.Font(size=8)
 
-        self.global_install_path = Path(
-            self.config["global_install_path"].replace(
-                "@ProgramFiles@", os.environ.get("ProgramFiles")
+        global_install_path = self.config["global_install_path"]
+        if "@ProgramFiles@" in global_install_path:
+            self.global_install_path = Path(
+                self.config["global_install_path"].replace(
+                    "@ProgramFiles@", os.environ.get("ProgramFiles")
+                )
             )
-        )
+        elif "@ProgramFiles86@" in global_install_path:
+            self.global_install_path = Path(
+                self.config["global_install_path"].replace(
+                    "@ProgramFiles86@", os.environ.get("ProgramFiles(x86)")
+                )
+            )
         self.global_install_exists = (
             self.global_install_path.exists() and self.global_install_path.is_dir()
         )
@@ -285,12 +295,12 @@ class InstallerApp(tk.Tk):
         self.back_button.pack(side="right")
 
         self.finished_frame.pack(side="top", anchor="nw", fill="both", expand=True)
-        # sep = ttk.Separator(self, orient=tk.HORIZONTAL)
-        # sep.pack(side="top", fill="x", expand=True)
-        # add_horizontal_rule(self)
 
         self.buttons_frame.configure(relief="sunken", borderwidth=1)
         self.buttons_frame.pack(side="right", fill="x", expand=True)
+    
+    def cancel_pressed(self):
+        sys.exit(0)
 
     def back_pressed(self):
         self.decompress_frame.pack_forget()
@@ -310,14 +320,7 @@ class InstallerApp(tk.Tk):
     def install_pressed(self):
         if self.selected_option.get():
             run_as_admin()
-            program_files_var = (
-                "ProgramFiles(x86)"
-                if os.environ.get("ProgramFiles(x86)")
-                else "ProgramFiles"
-            )
-            install_path = self.config["global_install_path"].replace(
-                "@ProgramFiles@", program_files_var
-            )
+            install_path = self.global_install_path
         else:
             install_path = self.user_install_path
 
@@ -506,7 +509,7 @@ class InstallerApp(tk.Tk):
         )
 
         self.buttons_frame = tk.Frame(self)
-        self.cancel_button = ttk.Button(self.buttons_frame, text="Cancel")
+        self.cancel_button = ttk.Button(self.buttons_frame, text="Cancel", command=self.cancel_pressed)
         self.cancel_button.pack(side="right", anchor="nw", padx=8)
         self.install_button = ttk.Button(
             self.buttons_frame, text="Install", width=11, command=self.install_pressed
