@@ -2,6 +2,8 @@ import configparser
 import ctypes
 import getpass
 import os
+import platform
+import subprocess
 import sys
 import threading
 import time
@@ -35,11 +37,6 @@ def run_as_admin():
             None, "runas", sys.executable, " ".join(sys.argv), None, 1
         )
         sys.exit(0)
-
-
-def add_horizontal_rule(frame):
-    canvas = tk.Canvas(frame, height=1, bg="black")
-    canvas.pack(side="top", fill="x", expand=True)
 
 
 def resize_image(image, width, height):
@@ -101,6 +98,8 @@ class DecompressFrame(tk.Frame):
                 callback()
         except Exception as e:
             print(f"Error during decompression: {e}")
+            print(output_directory)
+            raise
 
     def decompress_7z(self, archive_path, output_directory):
         with SevenZipFile(archive_path, mode="r") as archive:
@@ -151,9 +150,14 @@ class InstallerApp(tk.Tk):
         self.BIG_BOLD_FONT = font.Font(weight="bold", size=16)
         self.MIN_FONT = font.Font(size=8)
 
-        self.global_install_path = Path(self.config["global_install_path"].replace(
-                "@ProgramFiles@", os.environ.get('ProgramFiles')))
-        self.global_install_exists = self.global_install_path.exists() and self.global_install_path.is_dir()
+        self.global_install_path = Path(
+            self.config["global_install_path"].replace(
+                "@ProgramFiles@", os.environ.get("ProgramFiles")
+            )
+        )
+        self.global_install_exists = (
+            self.global_install_path.exists() and self.global_install_path.is_dir()
+        )
 
         self.user_install_path = Path(
             self.config["user_install_path"].replace(
@@ -182,6 +186,22 @@ class InstallerApp(tk.Tk):
 
         self.__built = False
 
+    def finished_button_pressed(self):
+        if self.run_after_install.get():
+            installation_kind = self.selected_option.get()
+            if platform.system() == "Windows":
+                creation_flags = subprocess.CREATE_NEW_CONSOLE
+            else:
+                creation_flags = subprocess.START_NEW_SESSION
+            subprocess.Popen(
+                Path(
+                    f"{self.global_install_path if installation_kind else self.user_install_path}"
+                )
+                / self.config["app_exe_name"],
+                creationflags=creation_flags,
+            )
+        sys.exit(0)
+
     def install_complete(self):
         self.geometry("495x360")
         self.top_frame.pack_forget()
@@ -197,9 +217,11 @@ class InstallerApp(tk.Tk):
         if "," in finished_left_background:
             # Convert the RGB components to integers
             red, green, blue = map(int, finished_left_background.split(", "))
-            finished_left_background = f'#{red:02x}{green:02x}{blue:02x}'
+            finished_left_background = f"#{red:02x}{green:02x}{blue:02x}"
 
-        self.finished_left_frame = tk.Frame(self.finished_frame, background=finished_left_background)
+        self.finished_left_frame = tk.Frame(
+            self.finished_frame, background=finished_left_background
+        )
         self.finished_image = resize_image(self.orig_image, 80, 80)
         self.finished_tk_image = ImageTk.PhotoImage(self.finished_image)
 
@@ -224,7 +246,7 @@ class InstallerApp(tk.Tk):
             self.finished_right_frame,
             text=f"Completing {self.config['title']} Setup",
             font=self.MED_BOLD_FONT,
-            background="white"
+            background="white",
         )
         complete_label.pack(side="top", anchor="nw", pady=10, padx=6)
         description_label = tk.Label(
@@ -232,7 +254,7 @@ class InstallerApp(tk.Tk):
             text=f"{self.config['title']} has been installed on your computer.\nClick Finish to close Setup.",
             font=self.MIN_FONT,
             justify="left",
-            background="white"
+            background="white",
         )
         description_label.pack(side="top", anchor="nw", pady=10, padx=4)
 
@@ -244,7 +266,7 @@ class InstallerApp(tk.Tk):
             onvalue=1,
             offvalue=0,
             variable=self.run_after_install,
-            style="White.TCheckbutton"
+            style="White.TCheckbutton",
         )
         run_checkbox.pack(side="top", anchor="nw", padx=4, pady=30)
 
@@ -255,7 +277,9 @@ class InstallerApp(tk.Tk):
             side="right", anchor="nw", fill="both", expand=True
         )
 
-        self.finished_button = ttk.Button(self.buttons_frame, text="Finish")
+        self.finished_button = ttk.Button(
+            self.buttons_frame, text="Finish", command=self.finished_button_pressed
+        )
         self.finished_button.pack(side="right")
         self.back_button.pack_forget()
         self.back_button.pack(side="right")
@@ -263,7 +287,7 @@ class InstallerApp(tk.Tk):
         self.finished_frame.pack(side="top", anchor="nw", fill="both", expand=True)
         # sep = ttk.Separator(self, orient=tk.HORIZONTAL)
         # sep.pack(side="top", fill="x", expand=True)
-        #add_horizontal_rule(self)
+        # add_horizontal_rule(self)
 
         self.buttons_frame.configure(relief="sunken", borderwidth=1)
         self.buttons_frame.pack(side="right", fill="x", expand=True)
