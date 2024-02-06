@@ -31,6 +31,7 @@ def run_as_admin():
     if is_admin():
         print("Already running with administrator privileges.")
     else:
+        print(f"runas {sys.executable} {' '.join(sys.argv)}")
         ctypes.windll.shell32.ShellExecuteW(
             None, "runas", sys.executable, " ".join(sys.argv), None, 1
         )
@@ -184,33 +185,40 @@ class InstallerApp(tk.Tk):
         self.next_button.pack_forget()
         self.buttons_frame.pack_forget()
 
-        self.finished_frame = tk.Frame(self, height=495)
+        self.finished_frame = tk.Frame(self, height=495, background="white")
 
-        self.finished_left_frame = tk.Frame(self.finished_frame, background="blue")
+        finished_left_background = self.config.get("finished_logo_background", "blue")
+        if "," in finished_left_background:
+            # Convert the RGB components to integers
+            red, green, blue = map(int, finished_left_background.split(", "))
+            finished_left_background = f'#{red:02x}{green:02x}{blue:02x}'
+
+        self.finished_left_frame = tk.Frame(self.finished_frame, background=finished_left_background)
         self.finished_image = resize_image(self.orig_image, 80, 80)
         self.finished_tk_image = ImageTk.PhotoImage(self.finished_image)
 
         finished_image_label = tk.Label(
             self.finished_left_frame,
             image=self.finished_tk_image,
-            background="blue",
+            background=finished_left_background,
         )
         finished_image_label.pack(side="top", anchor="center", pady=20)
         finished_text_label = tk.Label(
             self.finished_left_frame,
             text=self.config["title"],
-            background="blue",
+            background=finished_left_background,
             foreground="white",
             font=self.BIG_BOLD_FONT,
         )
 
         finished_text_label.pack(side="top", anchor="center")
 
-        self.finished_right_frame = tk.Frame(self.finished_frame)
+        self.finished_right_frame = tk.Frame(self.finished_frame, background="white")
         complete_label = tk.Label(
             self.finished_right_frame,
             text=f"Completing {self.config['title']} Setup",
             font=self.MED_BOLD_FONT,
+            background="white"
         )
         complete_label.pack(side="top", anchor="nw", pady=10, padx=6)
         description_label = tk.Label(
@@ -218,15 +226,19 @@ class InstallerApp(tk.Tk):
             text=f"{self.config['title']} has been installed on your computer.\nClick Finish to close Setup.",
             font=self.MIN_FONT,
             justify="left",
+            background="white"
         )
         description_label.pack(side="top", anchor="nw", pady=10, padx=4)
 
+        style = ttk.Style()
+        style.configure("White.TCheckbutton", background="white")
         run_checkbox = ttk.Checkbutton(
             self.finished_right_frame,
             text=f"Run {self.config['title']}",
             onvalue=1,
             offvalue=0,
             variable=self.run_after_install,
+            style="White.TCheckbutton"
         )
         run_checkbox.pack(side="top", anchor="nw", padx=4, pady=30)
 
@@ -245,9 +257,10 @@ class InstallerApp(tk.Tk):
         self.finished_frame.pack(side="top", anchor="nw", fill="both", expand=True)
         # sep = ttk.Separator(self, orient=tk.HORIZONTAL)
         # sep.pack(side="top", fill="x", expand=True)
-        add_horizontal_rule(self)
+        #add_horizontal_rule(self)
 
-        self.buttons_frame.pack(side="right")
+        self.buttons_frame.configure(relief="sunken", borderwidth=1)
+        self.buttons_frame.pack(side="right", fill="x", expand=True)
 
     def back_pressed(self):
         self.decompress_frame.pack_forget()
