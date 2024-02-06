@@ -31,10 +31,10 @@ def run_as_admin():
     if is_admin():
         print("Already running with administrator privileges.")
     else:
-        print(f"runas {sys.executable} {' '.join(sys.argv)}")
         ctypes.windll.shell32.ShellExecuteW(
             None, "runas", sys.executable, " ".join(sys.argv), None, 1
         )
+        sys.exit(0)
 
 
 def add_horizontal_rule(frame):
@@ -135,6 +135,8 @@ class InstallerApp(tk.Tk):
     def __init__(self):
         super().__init__()
 
+        print(f"Admin: {is_admin()}")
+
         self.config = configparser.ConfigParser()
         self.config.read(CONFIG_PATH)
 
@@ -149,6 +151,10 @@ class InstallerApp(tk.Tk):
         self.BIG_BOLD_FONT = font.Font(weight="bold", size=16)
         self.MIN_FONT = font.Font(size=8)
 
+        self.global_install_path = Path(self.config["global_install_path"].replace(
+                "@ProgramFiles@", os.environ.get('ProgramFiles')))
+        self.global_install_exists = self.global_install_path.exists() and self.global_install_path.is_dir()
+
         self.user_install_path = Path(
             self.config["user_install_path"].replace(
                 "@LocalPrograms@", str(Path.home() / "AppData\Local\Programs")
@@ -159,7 +165,7 @@ class InstallerApp(tk.Tk):
         )
 
         # Tk variables
-        self.selected_option = tk.IntVar(value=0)
+        self.selected_option = tk.IntVar(value=0 if not is_admin() else 1)
         self.selected_option_text_default = (
             f"Fresh install for this user ({get_windows_username()})"
         )
