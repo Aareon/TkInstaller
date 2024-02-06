@@ -11,8 +11,8 @@ import tkinter as tk
 import zipfile
 from pathlib import Path
 from tkinter import font, ttk
-from loguru import logger
 
+from loguru import logger
 from PIL import Image, ImageTk
 from py7zr import SevenZipFile
 
@@ -100,7 +100,9 @@ class DecompressFrame(tk.Frame):
             if callback:
                 callback()
         except Exception as e:
-            logger.exception("Error during decompression:", e, archive_path, output_directory)
+            logger.exception(
+                "Error during decompression:", e, archive_path, output_directory
+            )
             raise
 
     def decompress_7z(self, archive_path, output_directory):
@@ -298,7 +300,7 @@ class InstallerApp(tk.Tk):
 
         self.buttons_frame.configure(relief="sunken", borderwidth=1)
         self.buttons_frame.pack(side="right", fill="x", expand=True)
-    
+
     def cancel_pressed(self):
         sys.exit(0)
 
@@ -509,7 +511,9 @@ class InstallerApp(tk.Tk):
         )
 
         self.buttons_frame = tk.Frame(self)
-        self.cancel_button = ttk.Button(self.buttons_frame, text="Cancel", command=self.cancel_pressed)
+        self.cancel_button = ttk.Button(
+            self.buttons_frame, text="Cancel", command=self.cancel_pressed
+        )
         self.cancel_button.pack(side="right", anchor="nw", padx=8)
         self.install_button = ttk.Button(
             self.buttons_frame, text="Install", width=11, command=self.install_pressed
