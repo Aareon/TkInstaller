@@ -1,6 +1,7 @@
 import configparser
 from pathlib import Path
 import PyInstaller.__main__ as pyinstaller
+import shutil
 
 if __name__ == "__main__":
     ROOT_PATH = Path(__file__).parent
@@ -11,6 +12,10 @@ if __name__ == "__main__":
     config.read(CONFIG_PATH)
     config = config["Installer"]
     EXE_NAME = config["app_exe_name"]
+    COMP_APP_PATH = config['compressed_app_path'].replace(
+        "@HERE@",
+        str(ROOT_PATH)
+    )
 
     pyinstaller.run([
         "__main__.py",
@@ -18,8 +23,14 @@ if __name__ == "__main__":
         "--noconsole",
         "--icon=.\\assets\\logo.png",
         "--add-data=.\\installer_config.ini:.",
-        "--add-data=.\\assets:assets"
+        "--add-data=.\\assets:assets",
+        f"--add-data={COMP_APP_PATH}:."
     ])
 
     BUILT_EXE = DIST_PATH / "__main__.exe"
-    BUILT_EXE.rename(DIST_PATH / config["app_exe_name"])
+    TARGET_EXE = DIST_PATH / config["app_exe_name"]
+
+    if TARGET_EXE.exists():
+        TARGET_EXE.unlink()
+
+    BUILT_EXE.rename(TARGET_EXE)
