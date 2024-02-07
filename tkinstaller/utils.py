@@ -3,22 +3,23 @@ import getpass
 import os
 import sys
 from pathlib import Path
+from tkinter import font
 
 from loguru import logger
 from PIL import Image
-from tkinter import font
 
 ROOT_DIR = Path(__file__).parent.parent
 ASSETS_DIR = ROOT_DIR / "assets"
 
 UAC_ICON_PATH = ASSETS_DIR / "UAC.png"
 
+
 def get_default_font():
     # Check if Segoe UI font is available on the system
     if "Segoe UI" in font.families():
         # Configure the font for all widgets
         default_font = font.Font(family="Segoe UI")
-        #root
+        # root
         return default_font
 
 

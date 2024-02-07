@@ -32,11 +32,8 @@ if "@LocalPrograms@" in INSTALLER_CONFIG["user_install_path"]:
     )
 elif "@USERPROFILE@" in INSTALLER_CONFIG["user_install_path"]:
     USER_INSTALL_PATH = Path(
-        INSTALLER_CONFIG["user_install_path"].replace(
-            "@UserProfile@", str(Path.home())
-        )
+        INSTALLER_CONFIG["user_install_path"].replace("@UserProfile@", str(Path.home()))
     )
-
 USER_INSTALL_EXISTS = USER_INSTALL_PATH.exists() and USER_INSTALL_PATH.is_dir()
 
 APP_EXE_NAME = INSTALLER_CONFIG.get("app_exe_name")

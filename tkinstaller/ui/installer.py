@@ -10,6 +10,7 @@ from tkinter import font, ttk
 from loguru import logger
 from PIL import Image, ImageTk
 
+from tkinstaller import config
 from tkinstaller.ui.extractor import DecompressFrame
 from tkinstaller.utils import (
     ROOT_DIR,
@@ -19,7 +20,6 @@ from tkinstaller.utils import (
     resize_image,
     run_as_admin,
 )
-from tkinstaller import config
 
 
 class InstallerApp(tk.Tk):
@@ -30,9 +30,7 @@ class InstallerApp(tk.Tk):
 
         logger.debug(f"IsAdmin: {is_admin()}")
 
-        UAC_ICON = ImageTk.PhotoImage(
-            resize_image(Image.open(UAC_ICON_PATH), 12, 12)
-        )
+        UAC_ICON = ImageTk.PhotoImage(resize_image(Image.open(UAC_ICON_PATH), 12, 12))
 
         self.BOLD_FONT = font.Font(weight="bold", size=8)
         self.MED_BOLD_FONT = font.Font(weight="bold", size=12)
@@ -40,7 +38,9 @@ class InstallerApp(tk.Tk):
         self.MIN_FONT = font.Font(size=8)
 
         # load image
-        image_fp = Path(config.INSTALLER_CONFIG["logo_path"].replace("@HERE@", str(ROOT_DIR)))
+        image_fp = Path(
+            config.INSTALLER_CONFIG["logo_path"].replace("@HERE@", str(ROOT_DIR))
+        )
         self.orig_image = Image.open(image_fp)
         small_image = resize_image(self.orig_image, 32, 32)
         self.tk_image = ImageTk.PhotoImage(small_image)
@@ -90,7 +90,9 @@ class InstallerApp(tk.Tk):
 
         self.finished_frame = tk.Frame(self, height=495, background="white")
 
-        finished_left_background = config.INSTALLER_CONFIG.get("finished_logo_background", "blue")
+        finished_left_background = config.INSTALLER_CONFIG.get(
+            "finished_logo_background", "blue"
+        )
         if "," in finished_left_background:
             # Convert the RGB components to integers
             red, green, blue = map(int, finished_left_background.split(", "))
@@ -155,9 +157,7 @@ class InstallerApp(tk.Tk):
         )
 
         self.finished_button = ttk.Button(
-            self.buttons_frame,
-            text="Finish",
-            command=self.finished_button_pressed
+            self.buttons_frame, text="Finish", command=self.finished_button_pressed
         )
         self.finished_button.pack(side="right")
         self.back_button.pack_forget()
@@ -195,7 +195,9 @@ class InstallerApp(tk.Tk):
 
         install_path = Path(install_path)
         archive_path = Path(
-            config.INSTALLER_CONFIG["compressed_app_path"].replace("@HERE@", str(ROOT_DIR))
+            config.INSTALLER_CONFIG["compressed_app_path"].replace(
+                "@HERE@", str(ROOT_DIR)
+            )
         )
 
         self.middle_frame.pack_forget()
