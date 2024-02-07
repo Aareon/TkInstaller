@@ -26,7 +26,7 @@ GLOBAL_INSTALL_EXISTS = GLOBAL_INSTALL_PATH.exists() and GLOBAL_INSTALL_PATH.is_
 
 USER_INSTALL_PATH = Path(
     INSTALLER_CONFIG["user_install_path"].replace(
-        "@LocalPrograms@", str(Path.home() / "AppData\Local\Programs")
+        "@LocalPrograms@", str(Path.home() / "AppData\\Local\\Programs")
     )
 )
 USER_INSTALL_EXISTS = USER_INSTALL_PATH.exists() and USER_INSTALL_PATH.is_dir()
