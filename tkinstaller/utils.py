@@ -34,9 +34,13 @@ def run_as_admin():
     if is_admin():
         logger.debug("Already running with administrator privileges.")
     else:
-        ctypes.windll.shell32.ShellExecuteW(
+        ret = ctypes.windll.shell32.ShellExecuteW(
             None, "runas", sys.executable, " ".join(sys.argv), None, 1
         )
+        if ret >= 33:
+            logger.debug("Acquired admin")
+        else:
+            logger.debug(f"Could not elevate: {ret}")
         sys.exit(0)
 
 
