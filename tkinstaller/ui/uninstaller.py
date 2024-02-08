@@ -23,6 +23,8 @@ from tkinstaller.utils import (
 def delete_folder_with_progress(progress_bar, folder_path):
     def delete_files_in_folder(folder):
         total_files = sum(1 for item in folder.glob("**/*"))
+        if total_files == 0:
+            return
         progress_per_file = 100 / total_files
         completed_files = 0
         for item in folder.glob("**/*"):
@@ -37,11 +39,15 @@ def delete_folder_with_progress(progress_bar, folder_path):
             progress_bar.update_idletasks()  # Update the progress bar
 
     def delete_folder(folder):
+        logger.debug(f"delete folder: {folder}")
         shutil.rmtree(folder)
 
     def delete_and_update_progress():
         delete_files_in_folder(folder_path)
+        delete_folder(folder_path)
         progress_bar.configure(value=100)
+        progress_bar.master.event_generate("<<ProgressFinished>>")
+
 
     delete_and_update_progress()
 
@@ -63,6 +69,14 @@ class UninstallerApp(tk.Tk):
         self.MED_BOLD_FONT = font.Font(weight="bold", size=12)
         self.BIG_BOLD_FONT = font.Font(weight="bold", size=16)
         self.MIN_FONT = font.Font(size=8)
+
+        self.finished_left_background = config.INSTALLER_CONFIG.get(
+            "finished_logo_background", "blue"
+        )
+        if "," in self.finished_left_background:
+            # Convert the RGB components to integers
+            red, green, blue = map(int, self.finished_left_background.split(", "))
+            self.finished_left_background = f"#{red:02x}{green:02x}{blue:02x}"
 
         # load image
         image_fp = Path(
@@ -89,6 +103,14 @@ class UninstallerApp(tk.Tk):
         self.run_after_install = tk.IntVar(value=1)
 
         self.__built = False
+    
+    def forget_all_children(self):
+        # Iterate over all children of the master widget
+        for child in self.winfo_children():
+            for c in child.winfo_children():
+                c.pack_forget()
+        # Forget (remove) the child widget from the layout
+        child.pack_forget()
 
     def finished_button_pressed(self):
         sys.exit(0)
@@ -99,6 +121,92 @@ class UninstallerApp(tk.Tk):
     def back_pressed(self):
         pass
 
+    def uninstall_finished(self, *args):
+        self.uninstall_frame.destroy()
+        self.progress_bar.destroy()
+        self.next_button.destroy()
+        title = config.INSTALLER_CONFIG["title"]
+        if config.INSTALLER_CONFIG.getboolean("show_version_in_title"):
+            title = f"{title} {config.INSTALLER_CONFIG['version']}"
+        self.title(f"{title} Uninstall")
+
+        self.finished_frame = tk.Frame(self, height=495, background="white")
+
+        self.finished_left_frame = tk.Frame(
+            self.finished_frame, background=self.finished_left_background
+        )
+        self.finished_image = resize_image(self.orig_image, 80, 80)
+        self.finished_tk_image = ImageTk.PhotoImage(self.finished_image)
+
+        finished_image_label = tk.Label(
+            self.finished_left_frame,
+            image=self.finished_tk_image,
+            background=self.finished_left_background,
+        )
+        finished_image_label.pack(side="top", anchor="center", pady=20)
+        finished_text_label = tk.Label(
+            self.finished_left_frame,
+            text=config.INSTALLER_CONFIG["title"],
+            background=self.finished_left_background,
+            foreground="white",
+            font=self.BIG_BOLD_FONT,
+        )
+
+        finished_text_label.pack(side="top", anchor="center")
+
+        self.finished_right_frame = tk.Frame(self.finished_frame, background="white")
+        complete_label = tk.Label(
+            self.finished_right_frame,
+            text=f"Completing {config.INSTALLER_CONFIG['title']} Uninstall",
+            font=self.MED_BOLD_FONT,
+            background="white",
+        )
+        complete_label.pack(side="top", anchor="nw", pady=10, padx=6)
+        description_label = tk.Label(
+            self.finished_right_frame,
+            text=(
+                f"{config.INSTALLER_CONFIG['title']} has been uninstalled from your computer."
+                "\n\nClick Finish to close Setup."
+            ),
+            font=self.MIN_FONT,
+            justify="left",
+            background="white",
+            wraplength=340,
+        )
+        description_label.pack(side="top", anchor="nw", pady=10, padx=4)
+
+        style = ttk.Style()
+        style.configure("White.TCheckbutton", background="white")
+
+        self.finished_left_frame.pack(
+            side="left", anchor="nw", fill="both", expand=True
+        )
+        self.finished_right_frame.pack(
+            side="right", anchor="nw", fill="both", expand=True
+        )
+
+        self.buttons_frame = tk.Frame(self, relief="sunken", borderwidth=1)
+
+        self.finish_button = ttk.Button(
+            self.buttons_frame,
+            text="Finish",
+            command=lambda: sys.exit(0),
+        )
+
+        self.finished_button = ttk.Button(
+            self.buttons_frame, text="Finish", command=self.finished_button_pressed
+        )
+
+        self.finished_frame.pack(side="top", anchor="nw", fill="both", expand=True)
+
+        self.cancel_button = ttk.Button(
+            self.buttons_frame, text="Cancel", command=self.cancel_pressed
+        )
+        self.cancel_button.pack(side="right", anchor="nw", padx=8)
+        self.finish_button.pack(side="right", anchor="nw")
+
+        self.buttons_frame.pack(side="right", fill="x", expand=True)
+
     def next_pressed(self):
         self.finished_frame.pack_forget()
         self.next_button.pack_forget()
@@ -107,9 +215,11 @@ class UninstallerApp(tk.Tk):
         logger.debug("Uninstalling...")
         self.uninstall_frame = tk.Frame(self, height=495)
         self.progress_bar = ttk.Progressbar(
-            self.uninstall_frame, orient=tk.HORIZONTAL, length=300, mode="determinate"
+            master=self.uninstall_frame, orient=tk.HORIZONTAL, length=300, mode="determinate"
         )
-        self.progress_bar.pack(side="top", anchor="center", pady=30)
+        self.progress_bar.pack(side="top", anchor="center", padx=10, pady=30)
+
+        self.bind("<<ProgressFinished>>", self.uninstall_finished)
 
         if config.GLOBAL_INSTALL_EXISTS:
             logger.debug(f"Uninstalling {config.GLOBAL_INSTALL_PATH}")
@@ -120,8 +230,11 @@ class UninstallerApp(tk.Tk):
             self.progress_bar.configure(value=0)
             delete_folder_with_progress(self.progress_bar, config.USER_INSTALL_PATH)
 
-        self.uninstall_frame.pack(side="top", anchor="nw", fill="both", expand=True)
-        self.buttons_frame.pack(side="bottom", anchor="nw", fill="x", expand=True)
+        if not config.GLOBAL_INSTALL_EXISTS and not config.USER_INSTALL_EXISTS:
+            self.uninstall_finished()
+        
+        self.uninstall_frame.pack(side="top", fill="both", expand=True)
+        self.buttons_frame.pack(side="bottom", fill="x", padx=10, pady=10)
 
     def build(self):
         self.geometry("495x360")
@@ -138,16 +251,8 @@ class UninstallerApp(tk.Tk):
 
         self.finished_frame = tk.Frame(self, height=495, background="white")
 
-        finished_left_background = config.INSTALLER_CONFIG.get(
-            "finished_logo_background", "blue"
-        )
-        if "," in finished_left_background:
-            # Convert the RGB components to integers
-            red, green, blue = map(int, finished_left_background.split(", "))
-            finished_left_background = f"#{red:02x}{green:02x}{blue:02x}"
-
         self.finished_left_frame = tk.Frame(
-            self.finished_frame, background=finished_left_background
+            self.finished_frame, background=self.finished_left_background
         )
         self.finished_image = resize_image(self.orig_image, 80, 80)
         self.finished_tk_image = ImageTk.PhotoImage(self.finished_image)
@@ -155,13 +260,13 @@ class UninstallerApp(tk.Tk):
         finished_image_label = tk.Label(
             self.finished_left_frame,
             image=self.finished_tk_image,
-            background=finished_left_background,
+            background=self.finished_left_background,
         )
         finished_image_label.pack(side="top", anchor="center", pady=20)
         finished_text_label = tk.Label(
             self.finished_left_frame,
             text=config.INSTALLER_CONFIG["title"],
-            background=finished_left_background,
+            background=self.finished_left_background,
             foreground="white",
             font=self.BIG_BOLD_FONT,
         )
