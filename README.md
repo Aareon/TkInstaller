@@ -17,4 +17,5 @@ Ensure `app_exe_name` matches the EXE you're trying to install, or the "Run afte
 > **Note**: `finished_logo_background` does not accept Alpha transparency values, and only accepts RGB.
 
 ## Credits
-- [Example logo.png](https://www.clipartmax.com/middle/m2H7d3d3N4m2K9G6_music-tambourine-icon-pandereta-en-silueta/)
+- [ClipArtMax](https://www.clipartmax.com/middle/m2H7d3d3N4m2K9G6_music-tambourine-icon-pandereta-en-silueta/) - Example logo.png
+- [Bitwarden](https://bitwarden.com/) - Layout/design inspiration
